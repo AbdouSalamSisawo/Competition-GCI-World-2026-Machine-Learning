@@ -10,8 +10,8 @@ Predicting the probability that a loan applicant will default, using gradient-bo
 |---|---|
 | **Final model** | Rank-weighted blend of LightGBM, CatBoost, and XGBoost |
 | **Cross-validation AUC (5-fold)** | **0.7676** |
-| **Public leaderboard AUC** | **0.76891** (first version without rate features: 0.76479) |
-| **Public leaderboard rank** | **#520**, up from #1739 with the first version |
+| **Public leaderboard AUC** | **0.77091** (progression: 0.76479 → 0.76891 → 0.77091) |
+| **Public leaderboard rank** | #520 with round 1 (0.76891), up from #1739 with the first version |
 | **Tutorial baseline** | ~0.70 |
 | **Features** | 32 raw → 143 after engineering |
 | **Code submission grade** | 100 / 100 |
@@ -62,11 +62,17 @@ Every change was kept only if it improved OOF AUC. That includes ideas that did 
 | 10 | Loan term chosen as the "most popular rate tier" | 0.76572 | ❌ no gain |
 | 11 | Heavier imputation model that also uses the other EXT scores | 0.76581 | ❌ no gain for 3× the cost |
 | 12 | #6 + #7 + #8 + #9 together | **0.76649** | ✅ |
-| 13 | Three-model rank blend on top of #12 | **0.76764** | ✅ **final** |
+| 13 | Three-model rank blend on top of #12 | **0.76764** | ✅ **final** (public LB 0.77091) |
 
 Groups #7–#9 were neutral or slightly negative on their own but added +0.0007 together on top of the imputation features, so all four were kept.
 
-The cross-validation gains have carried over to the public leaderboard so far. The first blend without rate features scored 0.76479, and the blend with them (#5) scored **0.76891** (+0.0041), slightly more than CV predicted (+0.0035).
+Every CV improvement carried over to the public leaderboard:
+
+| Submission | CV AUC | Public LB AUC |
+|---|---|---|
+| Round 1, without rate features | 0.76177 | 0.76479 |
+| Round 1, with rate features (#5) | 0.76526 (+0.0035) | 0.76891 (+0.0041) |
+| Round 2 (#13) | 0.76764 (+0.0024) | **0.77091** (+0.0020) |
 
 ---
 
