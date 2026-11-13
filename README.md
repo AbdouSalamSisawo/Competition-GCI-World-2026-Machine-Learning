@@ -9,18 +9,19 @@ Predicting the probability that a loan applicant will default, using gradient-bo
 | | |
 |---|---|
 | **Final model** | Rank-weighted blend of LightGBM, CatBoost, and XGBoost |
-| **Cross-validation AUC (5-fold)** | **0.7653** |
+| **Cross-validation AUC (5-fold)** | **0.7676** |
 | **Public leaderboard AUC** | **0.76891** (first version without rate features: 0.76479) |
 | **Public leaderboard rank** | **#520**, up from #1739 with the first version |
 | **Tutorial baseline** | ~0.70 |
-| **Features** | 32 raw → 114 after engineering |
+| **Features** | 32 raw → 143 after engineering |
 | **Code submission grade** | 100 / 100 |
 
 ---
 
 ## Highlights
 
-- **Implied interest rate feature.** The data gives the loan amount and the monthly payment but not the interest rate or the loan term. I recovered both by inverting the annuity formula. This lifted LightGBM CV AUC from **0.7601 to 0.7636**, the largest single gain in the project, and the derived features rank among the model's top-8 most important.
+- **Implied interest rate feature.** The data gives the loan amount and the monthly payment but not the interest rate or the loan term. I recovered both by inverting the annuity formula. This lifted LightGBM CV AUC from **0.7601 to 0.7636**, the largest single gain in the project.
+- **Model-based imputation of the external credit scores.** Each `EXT_SOURCE` score is predicted from the applicant's other attributes, without using the target. The gap between the actual and the expected score ("this applicant scores lower than their profile suggests") added **+0.0020** CV AUC.
 - **Robust validation.** I used 5-fold stratified cross-validation instead of a single hold-out. Every modelling decision was made on out-of-fold (OOF) AUC, never on the public leaderboard, to avoid overfitting a test subset.
 - **Diverse ensemble.** Three boosting libraries with different handling of categorical features. They are blended by rank averaging (AUC only depends on ordering), with weights chosen on OOF predictions.
 - **Fully reproducible and rule-compliant.** Fixed seeds throughout, no external data, no hand-labeling. One notebook regenerates the submitted CSV end to end.
@@ -31,11 +32,11 @@ Predicting the probability that a loan applicant will default, using gradient-bo
 
 | Model | 5-fold OOF AUC |
 |---|---|
-| LightGBM | 0.76376 |
-| CatBoost | 0.76253 |
-| XGBoost | 0.76275 |
-| Equal-weight rank blend | 0.76517 |
-| **Weighted rank blend** (0.45 / 0.40 / 0.15) | **0.76526** |
+| LightGBM | 0.76649 |
+| CatBoost | 0.76521 |
+| XGBoost | 0.76562 |
+| Equal-weight rank blend | 0.76758 |
+| **Weighted rank blend** (0.45 / 0.40 / 0.15) | **0.76764** |
 
 Fold scores range from 0.758 to 0.770, so the estimate is stable. The blend beats every single model even though the models' test predictions are highly correlated (ρ = 0.977–0.996): CatBoost's ordered target statistics give the most complementary errors.
 
@@ -52,9 +53,20 @@ Every change was kept only if it improved OOF AUC. That includes ideas that did 
 | 2 | + implied monthly interest rate for 8 loan terms | 0.76302 | ✅ |
 | 3 | + KNN target mean (500 nearest neighbours on EXT_SOURCE & credit/annuity, computed out-of-fold) | 0.75886 | ❌ hurt CV |
 | 4 | Rates for 11 terms + estimated term, total interest, rate relative to similar contracts | **0.76356** | ✅ |
-| 5 | Three-model rank blend on top of #4 | **0.76526** | ✅ final |
+| 5 | Three-model rank blend on top of #4 | 0.76526 | ✅ (public LB 0.76891) |
+| | ***Round 2***: each group tested on top of #4 (LightGBM 0.76376) | | |
+| 6 | Model-based EXT_SOURCE imputation (prediction, filled-in score, residual) | 0.76575 | ✅ |
+| 7 | Amount patterns: pricing-tier popularity, exact (credit, annuity) pair counts, round numbers | 0.76392 | ✅ in combination |
+| 8 | ID-document & date features: age at ID issue, overdue ID renewal at age 20 / 45, age at job start | 0.76388 | ✅ in combination |
+| 9 | Interest rate relative to peers with similar EXT score and term | 0.76346 | ✅ in combination |
+| 10 | Loan term chosen as the "most popular rate tier" | 0.76572 | ❌ no gain |
+| 11 | Heavier imputation model that also uses the other EXT scores | 0.76581 | ❌ no gain for 3× the cost |
+| 12 | #6 + #7 + #8 + #9 together | **0.76649** | ✅ |
+| 13 | Three-model rank blend on top of #12 | **0.76764** | ✅ **final** |
 
-The cross-validation gains carried over to the public leaderboard. The blend without rate features scored 0.76479 on the public leaderboard, and the final blend with them scored **0.76891** (+0.0041), slightly more than CV predicted (+0.0035).
+Groups #7–#9 were neutral or slightly negative on their own but added +0.0007 together on top of the imputation features, so all four were kept.
+
+The cross-validation gains have carried over to the public leaderboard so far. The first blend without rate features scored 0.76479, and the blend with them (#5) scored **0.76891** (+0.0041), slightly more than CV predicted (+0.0035).
 
 ---
 
@@ -73,11 +85,14 @@ The cross-validation gains carried over to the public leaderboard. The blend wit
 - Anomalies are converted to `NaN`, and indicator flags keep the information they carried (e.g. `DAYS_EMPLOYED_ANOM`).
 - There is no mean imputation. Missingness is informative, and gradient-boosted trees learn the best split direction for `NaN` values themselves.
 
-### 3. Feature engineering (32 → 114 features)
+### 3. Feature engineering (32 → 143 features)
 
 | Group | Examples | Intuition |
 |---|---|---|
 | **Implied interest rate** | `RATE_{6..60}`, `TERM_GUESS`, `RATE_GUESS`, `TOTAL_INTEREST`, `RATE_DIV_CONTRACT` | The rate a lender charges encodes its own risk assessment |
+| **EXT_SOURCE imputation** | `EXT_SOURCE_k_PRED`, `_FILLED`, `_RESID` | A model's "expected" credit score vs the actual one |
+| ID & date details | age at ID issue, overdue ID renewal, age at job start | Life-event consistency and document hygiene |
+| Amount patterns | pricing-tier popularity, (credit, annuity) pair counts, round amounts | Standard products vs unusual contracts |
 | Affordability ratios | credit/annuity, annuity/income, credit/goods price, income per family member | Payment burden and loan structure |
 | External-score aggregates | mean, weighted sum, product, min/max/std, pairwise products | Combine the strongest signals |
 | Time ratios | employment/age, ID-change/age, phone-change/age, age at loan end | Stability of the applicant |
@@ -88,7 +103,7 @@ The cross-validation gains carried over to the public leaderboard. The blend wit
 
 $$A = C \cdot \frac{r}{1-(1+r)^{-n}}$$
 
-For each common term $n \in \{6, 10, 12, 18, 24, 30, 36, 42, 48, 54, 60\}$ months, I solve for $r$ with a vectorised bisection. The shortest term that yields a plausible rate (≥ 0.5 %/month) becomes the estimated term. Rate-derived features are among the most important in the final model, and `RATE_DIV_CONTRACT` (the applicant's rate relative to similar contracts) ranks 6th:
+For each common term $n \in \{6, 10, 12, 18, 24, 30, 36, 42, 48, 54, 60\}$ months, I solve for $r$ with a vectorised bisection. The shortest term that yields a plausible rate (≥ 0.5 %/month) becomes the estimated term. In the final model, the imputed credit scores (`EXT_FILLED_MEAN`, `EXT_FILLED_W`) are by far the most important features. Engineered features hold most of the top 30, including `AGE_AT_JOB_START` (#7), `RATE_DIV_CONTRACT` (the applicant's rate relative to similar contracts, #13) and several `RATE_*` columns:
 
 <p align="center"><img src="assets/feature_importance.png" width="520" alt="LightGBM feature importance, top 30"></p>
 
