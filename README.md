@@ -117,8 +117,11 @@ Predictions are converted to ranks before blending, because AUC depends only on 
 ├── tutorial.ipynb                       # Organiser-provided baseline tutorial
 ├── README.ipynb                         # Organiser-provided competition description and rules
 ├── HomeCredit_columns_description.xlsx  # Data dictionary
-└── input/                               # train.csv, test.csv, sample_submission.csv
+└── input/                               # data goes here (not included, see below)
 ```
+
+## Data
+The data files are **not included** in this repository. They are a subset of the Kaggle [Home Credit Default Risk](https://www.kaggle.com/c/home-credit-default-risk/data) dataset, distributed to GCI World 2026 participants under the competition's terms. To run the notebook, place the course-provided `train.csv`, `test.csv` and `sample_submission.csv` in `input/`. The column definitions are in `HomeCredit_columns_description.xlsx`.
 
 ## Reproducing the results
 
