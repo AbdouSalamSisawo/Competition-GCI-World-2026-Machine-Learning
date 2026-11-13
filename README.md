@@ -11,6 +11,7 @@ Predicting the probability that a loan applicant will default, using gradient-bo
 | **Final model** | Rank-weighted blend of LightGBM, CatBoost, and XGBoost |
 | **Cross-validation AUC (5-fold)** | **0.7653** |
 | **Public leaderboard AUC** | **0.76891** (first version without rate features: 0.76479) |
+| **Public leaderboard rank** | **#520**, up from #1739 with the first version |
 | **Tutorial baseline** | ~0.70 |
 | **Features** | 32 raw → 114 after engineering |
 | **Code submission grade** | 100 / 100 |
