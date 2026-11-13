@@ -10,7 +10,7 @@ Predicting the probability that a loan applicant will default, using gradient-bo
 |---|---|
 | **Final model** | Rank-weighted blend of LightGBM, CatBoost, and XGBoost |
 | **Cross-validation AUC (5-fold)** | **0.7653** |
-| **Public leaderboard AUC** | 0.76479 (first version, CV 0.7618) |
+| **Public leaderboard AUC** | **0.76891** (first version without rate features: 0.76479) |
 | **Tutorial baseline** | ~0.70 |
 | **Features** | 32 raw → 114 after engineering |
 | **Code submission grade** | 100 / 100 |
@@ -52,6 +52,8 @@ Every change was kept only if it improved OOF AUC. That includes ideas that did 
 | 3 | + KNN target mean (500 nearest neighbours on EXT_SOURCE & credit/annuity, computed out-of-fold) | 0.75886 | ❌ hurt CV |
 | 4 | Rates for 11 terms + estimated term, total interest, rate relative to similar contracts | **0.76356** | ✅ |
 | 5 | Three-model rank blend on top of #4 | **0.76526** | ✅ final |
+
+The cross-validation gains carried over to the public leaderboard. The blend without rate features scored 0.76479 on the public leaderboard, and the final blend with them scored **0.76891** (+0.0041), slightly more than CV predicted (+0.0035).
 
 ---
 
